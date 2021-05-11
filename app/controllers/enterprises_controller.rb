@@ -1,16 +1,16 @@
 class EnterprisesController < ApplicationController
-  before_action :set_enterprise, only: %i[ show update destroy ]
+  before_action :set_enterprise, only: %i[show update destroy upload]
 
   # GET /enterprises
   # GET /enterprises.json
   def index
     @enterprises = Enterprise.all
+    filter_by_query if params[:q]
   end
 
   # GET /enterprises/1
   # GET /enterprises/1.json
-  def show
-  end
+  def show; end
 
   # POST /enterprises
   # POST /enterprises.json
@@ -34,6 +34,11 @@ class EnterprisesController < ApplicationController
     end
   end
 
+  def upload
+    @enterprise.image.attach(params[:image])
+    render :show, status: :created, location: @enterprise
+  end
+
   # DELETE /enterprises/1
   # DELETE /enterprises/1.json
   def destroy
@@ -41,13 +46,21 @@ class EnterprisesController < ApplicationController
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_enterprise
-      @enterprise = Enterprise.find(params[:id])
-    end
 
-    # Only allow a list of trusted parameters through.
-    def enterprise_params
-      params.require(:enterprise).permit(:nome, :endereco)
-    end
+  # Use callbacks to share common setup or constraints between actions.
+  def set_enterprise
+    id = params[:id] || params[:enterprise_id]
+    @enterprise = Enterprise.find(id)
+  end
+
+  # Only allow a list of trusted parameters through.
+  def enterprise_params
+    params.require(:enterprise).permit(:nome, :endereco)
+  end
+
+  def filter_by_query
+    @enterprises = @enterprises
+                   .ransack(nome_or_endereco_cont: params[:q])
+                   .result
+  end
 end
