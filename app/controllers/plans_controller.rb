@@ -1,24 +1,25 @@
 class PlansController < ApplicationController
-  before_action :set_plan, only: %i[ show update destroy ]
+  before_action :set_enterprise
+  before_action :set_plan, only: %i[show update destroy upload]
 
   # GET /plans
   # GET /plans.json
   def index
-    @plans = Plan.all
+    @plans = @enterprise.plans
+    filter_by_query if params[:q].present?
   end
 
   # GET /plans/1
   # GET /plans/1.json
-  def show
-  end
+  def show; end
 
   # POST /plans
   # POST /plans.json
   def create
-    @plan = Plan.new(plan_params)
+    @plan = @enterprise.plans.new(plan_params)
 
     if @plan.save
-      render :show, status: :created, location: @plan
+      render :show, status: :created, location: enterprise_plan_url(@enterprise, @plan)
     else
       render json: @plan.errors, status: :unprocessable_entity
     end
@@ -28,7 +29,7 @@ class PlansController < ApplicationController
   # PATCH/PUT /plans/1.json
   def update
     if @plan.update(plan_params)
-      render :show, status: :ok, location: @plan
+      render :show, status: :ok, location: enterprise_plan_url(@enterprise, @plan)
     else
       render json: @plan.errors, status: :unprocessable_entity
     end
@@ -40,14 +41,32 @@ class PlansController < ApplicationController
     @plan.destroy
   end
 
-  private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_plan
-      @plan = Plan.find(params[:id])
-    end
+  def upload
+    @plan.image.attach(params[:image])
 
-    # Only allow a list of trusted parameters through.
-    def plan_params
-      params.require(:plan).permit(:room, :area)
-    end
+    render :show, status: :ok, location: enterprise_plan_url(@enterprise, @plan)
+  end
+
+  private
+
+  # Use callbacks to share common setup or constraints between actions.
+  def set_plan
+    id = params[:id] || params[:plan_id]
+    @plan = @enterprise.plans.find(id)
+  end
+
+  def set_enterprise
+    @enterprise = Enterprise.find(params[:enterprise_id])
+  end
+
+  # Only allow a list of trusted parameters through.
+  def plan_params
+    params.require(:plan).permit(:room, :area, :enterprise_id)
+  end
+
+  def filter_by_query
+    @plans = @plans
+             .ransack(room_or_area_cont: params[:q])
+             .result
+  end
 end
