@@ -37,7 +37,8 @@ class UsersController < ApplicationController
     find_user
     @user = User.new(user_params) unless @user.present?
     @address = Address.new(address_params.to_h.merge(user: @user)) if @user.save
-    @order = Order.new(order_params.to_h.merge(user: @user)) if @address.save
+    find_order
+    @order = Order.new(order_params.to_h.merge(user: @user)) if @address.save && !@order.present?
     render :show, status: :created, location: @user if @order.save
   end
 
@@ -75,5 +76,9 @@ class UsersController < ApplicationController
     params
       .require(:order)
       .permit(:plan_id)
+  end
+
+  def find_order
+    @order = Order.find_by(plan_id: order_params[:plan_id], user: @user)
   end
 end
